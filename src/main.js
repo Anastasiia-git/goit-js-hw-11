@@ -1,32 +1,71 @@
-const API_KEY = "47508443-dec4cffb8f44668b6640702d9"
+import getPictures from "./js/pixabay-api";
+import createMurkup from "./js/render-functions";
 
-const gallery = document.querySelector(".gallery")
+import iziToast from "izitoast";
+import "izitoast/dist/css/iziToast.min.css";
 
-const params = new URLSearchParams({
-    key: API_KEY,
-    q: "red rose",
-    image_type: "photo",
-    orientation: "horizontal",
-    safesearch: "true"
-})
+import SimpleLightbox from "simplelightbox";
+import "simplelightbox/dist/simple-lightbox.min.css";
+const lightbox = new SimpleLightbox('.gallery a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+  captionClass: 'imageTitle',
+});
 
-fetch(`https://pixabay.com/api/?${params}`)
-.then((res) => {
-    if (!res.ok) {
-        throw new Error(res.statusText)
-    }
-    return res.json()
-})
-.then(data => {
-    gallery.insertAdjacentHTML("beforeend", createMarkup(data.hits))
+
+const form = document.querySelector(".form");
+const gallery = document.querySelector(".gallery");
+const loader = document.querySelector(".loader");
+
+form.addEventListener("submit", toSabmit);
+
+function toSabmit(evt) {
+    evt.preventDefault();
     
-})
-.catch(error => console.log(error))
+    const { picture } = evt.target.elements;
+    const value = picture.value.trim();
+     gallery.innerHTML = ""; 
+    if(!value || value === ""){
+        { iziToast.show({
+      title:":(",         
+      message: "Please add request!",
+      position: "topRight",
+      color: "red"
+            });
+            gallery.innerHTML = ":(";
+            return
+              
+            }
+    }
+   
+loader.classList.remove("hidden");
+    getPictures(value)
+            .then((data) => {
+            if (!data.hits.length) { iziToast.show({
+      title:"X",         
+      message: "Sorry, there are no images matching your search query. Please try again!",
+      position: "topRight",
+      color: "red"
+            });
+            }
+            else {
 
-function createMarkup(arr) {
-    return arr.map(({id, previewURL, tags}) => `
-<li data-id="${id}">
-  <img src="${previewURL}" alt="${tags}" width="360">
-</li>
-    `).join("")
+                gallery.innerHTML = createMurkup(data.hits);
+                lightbox.refresh(); 
+                }           
+            
+         })
+        .catch((error) => {
+            iziToast.show({
+                title: "X",
+                message: `${error.message}`,
+                position: "topRight",
+                color: "red"
+            })
+        })
+        .finally(() => {
+            picture.value = "" 
+            loader.classList.add("hidden");
+            
+        })
 }
